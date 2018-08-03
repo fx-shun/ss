@@ -56,7 +56,7 @@ class Neighborhood:
         if showActors == False:
             self.color = SimColor.getColorForValue(float(value[0]))
         else:
-            self.color = SimColor.WHITE
+            self.color = SimColor.DGRAY
 
         rect = pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
         #mouse over code below
@@ -77,6 +77,9 @@ class SimColor:
     GRAY = (127, 127, 127)
     WHITE = (255, 255, 255)
     BLACK = (0, 0, 0)
+    DGRAY = (65, 65, 65)
+    LGRAY = (200, 200, 200)
+
     
     @classmethod
     def getColorForValue(cls,val):
@@ -145,7 +148,7 @@ class VizMap:
 #day	participant	gender	age	ethnicity	#children	region	alive	shelter	evacuated	risk	health	grievance
 #0	0001	male	38	majority	2	Region01	True	False	False	5	5	2
         header = True
-        with open("DisplayTable") as f:
+        with open(displayTableFileName) as f:
             lines = f.readlines()
             for line in lines:
                 line = line.rstrip('\n')
@@ -180,6 +183,7 @@ def main(argv):
     global numygrid
     global vm
     global showActors
+    global displayTableFileName
     currentDay = 1 
     numOfDays = 10
     showActors = False
@@ -187,6 +191,9 @@ def main(argv):
     sWidth = 1920
     sHeight = 1080
     updateInterval = 1000
+
+    displaylayer="Region"
+    displayproperty ="Safety"
 
     if len(argv) >= 3:
         sWidth = int(argv[1])
@@ -203,6 +210,7 @@ def main(argv):
         regionFileName = argv[6]
     if len(argv) >=8:
         currentPropRegion = argv[7]
+        
     else:
         currentPropRegion = 'safety'
 
@@ -215,6 +223,29 @@ def main(argv):
         currentPropIndividual = argv[9]
     else:
         currentPropIndividual = 'risk'
+
+    if len(argv) >=11:
+        displayTableFileName = argv[10]
+    else:
+        displayTableFileName = 'data/DisplayTable'
+    
+    if len(argv) >= 12:
+        if int(argv[11]) == 0:
+            showActors =  False
+            displaylayer = "Regions"
+            displayproperty = currentPropRegion
+        else: 
+            showActors = True
+            displaylayer = "Actors"
+            displayproperty = currentPropIndividual
+
+    else:
+        showActors = False
+        displaylayer = "Regions"
+        displayproperty = currentPropRegion
+
+    
+    
 
     win = pygame.display.set_mode((sWidth, sHeight))
 
@@ -249,7 +280,7 @@ def main(argv):
         vm.update()        
 
         if i == 0.0:
-            pygame.display.set_caption("Vizualization Day %d" % currentDay)
+            pygame.display.set_caption("Vizualization Day %d Layer: %s Property: %s" % (currentDay, displaylayer , displayproperty))
             if currentDay < numOfDays :
                 currentDay += 1
             else: 
