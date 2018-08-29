@@ -4,7 +4,8 @@ import pygame
 import random
 
 def handleInput():
-    #keys = pygame.key.get_pressed()
+
+    keys = pygame.key.get_pressed()
     pass
 
 class Individual:
@@ -17,19 +18,22 @@ class Individual:
         self.percentypos = float(y)
         pass
 
-    def update(self):
+    def update(self, currentDay, currentPropIndividual, vm):
         individualname = "%04d" % (self.id)
-        name = simdata["individuals"][currentDay-1][individualname]["region"]
+        
+        if not len(vm._simdata["actors"]) > 0:
+            return
+        name = vm._simdata["actors"][currentDay-1][individualname]["region"]
 
         r = vm.getRegion(name)
         if r is None:
             print ("Cant find region %s" %name)
             return
         #print("Drawing circle %d at %f, %f in region %s" %( int(self.id), r.x, r.y, self.id) )
-        value = simdata["individuals"][currentDay-1][individualname][currentPropIndividual]
+        value = vm._simdata["actors"][currentDay-1][individualname][currentPropIndividual]
 
         color = SimColor.getColorForValue(float(value[0]) / 5.0) #1 to 5 => 0 to 1
-        circle = pygame.draw.circle(win, color, (int(r.x + r.width * self.percentxpos), int(r.y + r.height * self.percentypos)), 5, 0)
+        circle = pygame.draw.circle(vm._win, color, (int(r.x + r.width * self.percentxpos), int(r.y + r.height * self.percentypos)), 5, 0)
         
 class Neighborhood:
     def __init__(self, x, y, width, height, color, id):
@@ -37,7 +41,7 @@ class Neighborhood:
         #self.props = {'casualties':[], 'risk':[]}
         self.startcolor = color
         self.x = x + 1
-        self.y = y + 1
+        self.y = y + 1  
         self.width = width - 2
         self.height = height - 2
 
@@ -45,20 +49,20 @@ class Neighborhood:
         #    self.props['casualties'].append(random.randrange(0,100,1)/100.0)
         #    self.props['risk'].append(random.randrange(0,100,1) / 100.0 )
         
-    def update(self):
+    def update(self, currentDay, currentPropRegion, vm):
         if self.id < 0:
-            rect = pygame.draw.rect(win, self.startcolor, (self.x, self.y, self.width, self.height))
+            rect = pygame.draw.rect(vm._win, self.startcolor, (self.x, self.y, self.width, self.height))
             return
         regionname = "Region%02d" % self.id
-        value = simdata["regions"][currentDay-1][regionname][currentPropRegion]
+        value = vm._simdata["regions"][currentDay-1][regionname][currentPropRegion]
         #print ("Day ", currentDay, " Neighborhood ", regionname, "Property ", self.currentProp, "Value", value[0])
         #print (currentDay - 1, "\t", regionname, "\t", value[0], "\t",         )
-        if showActors == False:
-            self.color = SimColor.getColorForValue(float(value[0]))
-        else:
+        if vm._showActors == 1 :
             self.color = SimColor.DGRAY
+        else:
+            self.color = SimColor.getColorForValue(float(value[0]))
 
-        rect = pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height))
+        rect = pygame.draw.rect(vm._win, self.color, (self.x, self.y, self.width, self.height))
         #mouse over code below
         # if rect.collidepoint(pygame.mouse.get_pos()):
         #     s = pygame.Surface((self.width,self.height), pygame.SRCALPHA)
@@ -101,14 +105,24 @@ class SimColor:
 
 class VizMap:
 
+
     def pygameInit(self):
-        pygame.display.set_caption("Vizualization")
+        pygame.display.set_caption("Visualization")
 
-    def __init__(self):
+    def __init__(self, sWidth, sHeight, numxgrid, numygrid, simdata, showActors, displayTableFileName, win, currentPropRegion, currentPropIndividual):
         
-
+        self._sWidth = sWidth
+        self._sHeight = sHeight 
+        self._numxgrid = numxgrid 
+        self._numygrid = numygrid
+        self._simdata = simdata
+        self._showActors = showActors
+        self._displayTableFileName = displayTableFileName
+        self._currentPropIndividual = currentPropIndividual
+        self._currentPropRegion = currentPropRegion
+        self._win = win
         self.pygameInit()
-        self.regionList = self.getRegions()
+        self.regionList = self.getRegions() 
         self.individualList = self.getIndividuals()
 
     def getRegion(self, name):
@@ -127,16 +141,16 @@ class VizMap:
     def getRegions(self):
         rl = []
         id = 0
-        for i in range(numxgrid):
-            for j in range(numygrid):
+        for i in range(self._numxgrid):
+            for j in range(self._numygrid):
                 if i == 0:
-                    rl.append(Neighborhood(i*sWidth/numxgrid, j*sHeight/numygrid, sWidth/numxgrid, sHeight/numygrid, SimColor.LIGHTBLUE,-1))
+                    rl.append(Neighborhood(i*self._sWidth/self._numxgrid, j*self._sHeight/self._numygrid, self._sWidth/self._numxgrid, self._sHeight/self._numygrid, SimColor.LIGHTBLUE,-1))
                     continue
-                if j == 0 or i == numxgrid - 1 or j == numygrid - 1:
-                    rl.append(Neighborhood(i*sWidth/numxgrid, j*sHeight/numygrid, sWidth/numxgrid, sHeight/numygrid, SimColor.BROWN, -2))
+                if j == 0 or i == self._numxgrid - 1 or j == self._numygrid - 1:
+                    rl.append(Neighborhood(i*self._sWidth/self._numxgrid, j*self._sHeight/self._numygrid, self._sWidth/self._numxgrid, self._sHeight/self._numygrid, SimColor.BROWN, -2))
                     continue
                 id+=1
-                rl.append(Neighborhood(i*sWidth/numxgrid, j*sHeight/numygrid, sWidth/numxgrid, sHeight/numygrid, SimColor.GRAY,id))
+                rl.append(Neighborhood(i*self._sWidth/self._numxgrid, j*self._sHeight/self._numygrid, self._sWidth/self._numxgrid, self._sHeight/self._numygrid, SimColor.GRAY,id))
         #rl.append(Neighborhood(50, 50, 200, 175, SimColor.RED))
         #rl.append(Neighborhood(250, 25, 100, 150, SimColor.GREEN))
         #rl.append(Neighborhood(100, 225, 150, 200, SimColor.YELLOW))
@@ -148,26 +162,27 @@ class VizMap:
 #day	participant	gender	age	ethnicity	#children	region	alive	shelter	evacuated	risk	health	grievance
 #0	0001	male	38	majority	2	Region01	True	False	False	5	5	2
         header = True
-        with open(displayTableFileName) as f:
-            lines = f.readlines()
-            for line in lines:
-                line = line.rstrip('\n')
-                values = line.split('\t')
-                if header == True:
-                    header = False
-                    headervalues = values
-                #print ("Header created")
-                    continue
-                iL.append(Individual(values[2], values[3], SimColor.GRAY, int(values[1])))
+        if not self._displayTableFileName == "":
+            with open(self._displayTableFileName) as f:
+                lines = f.readlines()
+                for line in lines:
+                    line = line.rstrip('\n')
+                    values = line.split('\t')
+                    if header == True:
+                        header = False
+                        headervalues = values
+                    #print ("Header created")
+                        continue
+                    iL.append(Individual(values[2], values[3], SimColor.GRAY, int(values[1])))
         return iL
 
-    def update(self):
-        win.fill((0,0,0))
+    def update(self, currentDay):
+        self._win.fill((0,0,0))
         for r in self.regionList:
-            r.update()
-        if showActors == True:
+            r.update(currentDay, self._currentPropRegion, self)
+        if self._showActors > 0:
             for i in self.individualList:
-                i.update()
+                i.update(currentDay, self._currentPropIndividual, self)
 
 
 def main(argv):
@@ -184,21 +199,43 @@ def main(argv):
     global vm
     global showActors
     global displayTableFileName
+
+
+    # parser = ArgumentParser()
+    # parser.add_argument('-w','--screenwidth',default='WARNING',type-=int,help='Resolution Width')
+    # parser.add_argument('-h','--screenheight',default=1,type=int,help='Resolution Height')
+    # parser.add_argument('-s','--speed',default=1,type=int,help='Number of runs to run')
+    # parser.add_argument('-x','--gridx',action='store_true',help='Profile simulation step')
+
+    # parser.add_argument('-y','--gridy',default=1,type=int,help='Instance number')
+    # parser.add_argument('-c','--compile',action='store_true',help='Pre-compile agent policies')
+    # args = vars(parser.parse_args())
+
+
+
+    usage = "python.exe .\\viz.py 1024 768 1 7 7 .\data2\RegionTable safety .\data2\ActorsTable health .\data2\DisplayTable 0"
+    print(usage)
+
     currentDay = 1 
     numOfDays = 10
-    showActors = False
+    showActors = 0
 
-    sWidth = 1920
-    sHeight = 1080
+    sWidth = 1024
+    sHeight = 768
+    speed = 1.0
     updateInterval = 1000
 
     displaylayer="Region"
     displayproperty ="Safety"
+    
+
+    numxgrid = 7
+    numygrid = 7
 
     if len(argv) >= 3:
         sWidth = int(argv[1])
         sHeight = int(argv[2])
-    speed = 1.0
+
     if len(argv) >= 4:
         speed = float(argv[3])
 
@@ -208,15 +245,20 @@ def main(argv):
     
     if len(argv) >=7:
         regionFileName = argv[6]
+    else:
+        regionFileName = "data\RegionTable"
     if len(argv) >=8:
         currentPropRegion = argv[7]
+    
         
     else:
         currentPropRegion = 'safety'
 
     if len(argv) >=9:
         individualFileName = argv[8]
-        showActors = True
+    else:
+        regionFileName = "data\ActorsTable"
+
     
 
     if len(argv) >=10:
@@ -227,20 +269,23 @@ def main(argv):
     if len(argv) >=11:
         displayTableFileName = argv[10]
     else:
-        displayTableFileName = 'data/DisplayTable'
+        displayTableFileName = ''
     
     if len(argv) >= 12:
-        if int(argv[11]) == 0:
-            showActors =  False
+        showActors = int(argv[11])
+        if  showActors == 0:        
             displaylayer = "Regions"
-            displayproperty = currentPropRegion
-        else: 
-            showActors = True
+            displayproperty = currentPropRegion    
+        if  showActors == 1:        
             displaylayer = "Actors"
             displayproperty = currentPropIndividual
+        if  showActors == 2:   
+            displaylayer = "Regions and Actors"
+            displayproperty = currentPropIndividual
+            displayproperty = currentPropRegion
 
     else:
-        showActors = False
+        showActors = 0
         displaylayer = "Regions"
         displayproperty = currentPropRegion
 
@@ -251,16 +296,18 @@ def main(argv):
 
     pygame.init()
 
-    vm = VizMap()
     run = True
     i = 0
     totalrecords = 0
     simdata = {}
-    simdata["individuals"] = []
+    simdata["actors"] = []
     simdata["regions"] = []
+
+    vm = VizMap(sWidth, sHeight, numxgrid, numygrid, simdata, showActors, displayTableFileName, win, currentPropRegion, currentPropIndividual)
+
     numOfDays =  readfile(regionFileName, "regions")
     if showActors == True:
-        readfile(individualFileName, "individuals")
+        readfile(individualFileName, "actors")
     # i  = 0
     # for daydata in simdata:
     #     i+=1
@@ -277,10 +324,10 @@ def main(argv):
                 run = False
 
         handleInput()
-        vm.update()        
+        vm.update(currentDay)        
 
         if i == 0.0:
-            pygame.display.set_caption("Vizualization Day %d Layer: %s Property: %s" % (currentDay, displaylayer , displayproperty))
+            pygame.display.set_caption("Visualization Day %d Layer: %s Property: %s" % (currentDay, displaylayer , displayproperty))
             if currentDay < numOfDays :
                 currentDay += 1
             else: 
@@ -315,7 +362,7 @@ def readfile(filename, keyname):
                 #print ("Header created")
                 continue
 
-            #print (values[0])
+            #print (values[0])  
             if simday != int(values[0]):
                 simday = int (values[0])
                 simdata[keyname].append({})
